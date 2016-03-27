@@ -1,0 +1,84 @@
+text
+skipx
+install
+# uncomment to enable centos 6 repo
+repo --name=epel --baseurl=http://download.fedoraproject.org/pub/epel/6/x86_64/
+# uncomment to enable centos 7 repo
+#repo --name=epel --baseurl=http://download.fedoraproject.org/pub/epel/7/x86_64/
+lang en_US.UTF-8
+keyboard us
+# YOU SHOULD CHANGE THIS PASSWORD, IT'S DEFAULT TO 'My Password'
+# run this command :  
+# python -c 'import os,crypt;salt=os.urandom(8).encode("hex");print salt;print(crypt.crypt("My Password", "$6$"+salt))'
+# change 'My Password' to other value then copy-paste output to <output>
+# rootpw --iscrypted <output>
+rootpw --iscrypted $6$f5764923ae625e88$M3etkv.SntR9HgF/GPAQ1cnHzKgKfObQJGtn9z1bdsfhX4eTlhMGcIMDTH3e0ELUermC8weRqUZXsKFzwNDwp0
+
+firewall --disable
+authconfig --enableshadow --passalgo=sha512
+firstboot --disable
+network --device=eth0 --activate --bootproto dhcp --noipv6 --onboot=yes --hostname=centos6.default.local
+selinux --disabled
+timezone Asia/Jakarta
+
+services --enabled=network,sshd
+
+poweroff
+
+zerombr
+bootloader --location=mbr --driveorder=vda --append="nomodeset"
+clearpart --all --initlabel
+part /boot --ondrive=vda --fstype ext4 --fsoptions="relatime,nodev" --size=512
+part pv.1 --ondrive=vda --size 1 --grow
+volgroup vg0 pv.1
+logvol / --fstype ext4 --fsoptions="noatime,nodiratime,relatime" --name=root --vgname=vg0 --size=8192
+logvol /home --fstype ext4 --fsoptions="noatime,nodiratime,relatime,nosuid,nodev" --name=home --vgname=vg0 --size 1024
+logvol /var --fstype ext4 --fsoptions="noatime,nodiratime,relatime,nosuid,nodev" --name=var --vgname=vg0 --size 1 --grow
+logvol /var/log --fstype ext4 --fsoptions="noatime,nodiratime,relatime,nosuid,nodev,noexec" --name=varlog --vgname=vg0 --size=2048
+logvol /var/log/audit --fstype ext4 --fsoptions="noatime,nodiratime,relatime,nosuid,nodev,noexec" --name=audit --vgname=vg0 --size=1024
+logvol /opt --fstype ext4 --fsoptions="noatime,nodiratime,relatime,nosuid,nodev" --name=opt --vgname=vg0 --size=2048
+logvol swap --fstype swap --name=swap --vgname=vg0 --size=1024
+
+%packages --nobase --ignoremissing
+acpid
+crontabs
+logrotate
+mailx
+mlocate
+openssh-clients
+openssh-server
+rsync
+tmpwatch
+vixie-cron
+which
+wget
+yum
+nc
+epel-release
+screen
+bind-utils
+unzip
+telnet
+tcptraceroute
+lsof
+man
+ntp
+-sendmail
+-biosdevname
+-postfix
+-prelink
+%end
+
+%pre
+%end
+
+%post
+sed -i 's/^tmpfs.*/tmpfs                   \/dev\/shm                tmpfs   defaults,nosuid,nodev,noexec        0 0/' /etc/fstab
+echo "/tmp /var/tmp none rw,noexec,nosuid,nodev,bind 0 0" >> /etc/fstab
+
+chkconfig ntpd on
+
+yum install -y cloud-init
+
+rm -f /etc/udev/rules.d/*persistent-net.rules
+%end
